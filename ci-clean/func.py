@@ -6,6 +6,7 @@ import dateutil.parser
 import datetime
 import time
 import re
+import requests
 
 import azure.functions as func
 
@@ -16,6 +17,12 @@ import azure.mgmt.resource as azr
 #   AZURE_CLIENT_ID
 #   AZURE_CLIENT_SECRET
 #   AZURE_TENANT_ID
+
+## Optionally supply :
+#   subscriptions           Comma separated list of subscription IDs
+#   max_rg_age              Max age of a RG that doesn't have an expiry date
+#   datadog_api_key         Datadog API key for sending events
+#
 
 regex = re.compile(r'((?P<days>\d+?)d)?((?P<hours>\d+?)h)?((?P<minutes>\d+?)m)?')
 defaultRgAge = "7d"
@@ -64,6 +71,14 @@ def main(mytimer: func.TimerRequest) -> None:
 
 def clean_rg(credentials, subscriptionId, rg):
     logging.info("Cleaning RG %s/%s" % (subscriptionId, rg))
+    datadog_event( {
+      'alert_type': 'info',
+      'source_type_name': 'AZURE',
+      'text': "Deleting resource group %s" % rg["Name"],
+      'title': 'Azure RG Cleanup',
+      'payload': rg,
+      'tags': rg['Tags']
+    })
 
     with azr.ResourceManagementClient(credentials, subscriptionId) as rg_client:
         try:
@@ -178,4 +193,17 @@ def parse_time(time_str):
 
     return datetime.timedelta(**time_params)
 
+
+def datadog_event(data):
+    key = os.getenv("datadog_api_key", None)
+    if not key:
+        return
+
+    url = "https://api.datadoghq.com/api/v1/events"
+    headers = {
+        'DD-API-KEY': key
+    }
+
+    resp = requests.post(url, json=data, headers=headers)
+    logging.info("Datadog response: %s" % resp.content)
 

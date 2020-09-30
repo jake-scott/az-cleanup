@@ -5,3 +5,4 @@ azure-mgmt-resource
 azure-identity
 
 python-dateutil
+requests
