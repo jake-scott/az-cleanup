@@ -30,6 +30,13 @@ defaultRgAge = "7d"
 def main(mytimer: func.TimerRequest) -> None:
     maxRgAge = os.getenv("max_rg_age", defaultRgAge)
 
+    datadog_event( {
+      'alert_type': 'info',
+      'source_type_name': 'AZURE',
+      'text': "ci-clean starting",
+      'title': 'ci-clean starting'
+    })
+
     ## Default Azure SDK is very verbose..
     azLogger = logging.getLogger("azure")
     azLogger.setLevel(logging.WARN)
@@ -67,6 +74,13 @@ def main(mytimer: func.TimerRequest) -> None:
         logging.info("Still waiting for %d RG deletions", len(tasks))
 
     logging.info("Delete tasks have completed")
+
+    datadog_event( {
+      'alert_type': 'info',
+      'source_type_name': 'AZURE',
+      'text': "ci-clean complete",
+      'title': 'ci-clean complete'
+    })
 
 
 def clean_rg(credentials, subscriptionId, rg):
